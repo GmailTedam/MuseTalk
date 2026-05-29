@@ -16,3 +16,6 @@ ffplay*
 debug
 exp_out
 .gradio
+.venv/
+_shim_test/
+_test_whisper/
