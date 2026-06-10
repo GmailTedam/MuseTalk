@@ -14,10 +14,10 @@ not a still image; for stills we ffmpeg-loop to a tiny single-frame video.
 
 Run as: MUSETALK_ENTRY=musetalk_render_shim
 """
+
 from __future__ import annotations
 
 import argparse
-import os
 import shutil
 import subprocess
 import sys
@@ -30,6 +30,7 @@ def _ffmpeg_bin() -> str:
     """Resolve ffmpeg: prefer imageio_ffmpeg's bundled binary, fall back to PATH."""
     try:
         import imageio_ffmpeg
+
         return imageio_ffmpeg.get_ffmpeg_exe()
     except Exception:
         return "ffmpeg"
@@ -38,12 +39,24 @@ def _ffmpeg_bin() -> str:
 def _loop_image_to_video(image: Path, duration_s: float, fps: int, out: Path) -> None:
     """ffmpeg-loop a still image into a short video of given duration."""
     cmd = [
-        _ffmpeg_bin(), "-y", "-loglevel", "error",
-        "-loop", "1", "-i", str(image),
-        "-t", f"{duration_s:.3f}",
-        "-r", str(fps),
-        "-c:v", "libx264", "-pix_fmt", "yuv420p",
-        "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+        _ffmpeg_bin(),
+        "-y",
+        "-loglevel",
+        "error",
+        "-loop",
+        "1",
+        "-i",
+        str(image),
+        "-t",
+        f"{duration_s:.3f}",
+        "-r",
+        str(fps),
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-vf",
+        "scale=trunc(iw/2)*2:trunc(ih/2)*2",
         str(out),
     ]
     subprocess.run(cmd, check=True)
@@ -53,6 +66,7 @@ def _wav_duration_s(wav: Path) -> float:
     """Wav duration via soundfile (always present alongside MuseTalk's reqs)."""
     try:
         import soundfile as sf
+
         with sf.SoundFile(str(wav)) as f:
             return f.frames / float(f.samplerate)
     except Exception:
@@ -98,8 +112,8 @@ def main() -> int:
         cfg_path = td_path / "shim_config.yaml"
         cfg_path.write_text(
             f"{task_id}:\n"
-            f"  video_path: \"{video_for_musetalk.as_posix()}\"\n"
-            f"  audio_path: \"{audio.as_posix()}\"\n"
+            f'  video_path: "{video_for_musetalk.as_posix()}"\n'
+            f'  audio_path: "{audio.as_posix()}"\n'
             f"  bbox_shift: {args.bbox_shift}\n",
             encoding="utf-8",
         )
@@ -109,11 +123,17 @@ def main() -> int:
 
         # 3. Run MuseTalk's real inference.
         cmd = [
-            sys.executable, "-m", "scripts.inference",
-            "--inference_config", str(cfg_path),
-            "--result_dir", str(result_dir),
-            "--version", args.version,
-            "--output_vid_name", "shim_out.mp4",
+            sys.executable,
+            "-m",
+            "scripts.inference",
+            "--inference_config",
+            str(cfg_path),
+            "--result_dir",
+            str(result_dir),
+            "--version",
+            args.version,
+            "--output_vid_name",
+            "shim_out.mp4",
         ]
         print(f"[shim] running: {' '.join(cmd)}", flush=True)
         proc = subprocess.run(cmd, cwd=str(repo))
@@ -129,7 +149,9 @@ def main() -> int:
             break
         if produced is None:
             # Fallback: take the newest .mp4 under result_dir.
-            mp4s = sorted(result_dir.rglob("*.mp4"), key=lambda p: p.stat().st_mtime, reverse=True)
+            mp4s = sorted(
+                result_dir.rglob("*.mp4"), key=lambda p: p.stat().st_mtime, reverse=True
+            )
             if mp4s:
                 produced = mp4s[0]
         if produced is None:

@@ -1,7 +1,8 @@
-'''
-    This part of code contains a pretrained vgg_face model.
-    ref link: https://github.com/prlz77/vgg-face.pytorch
-'''
+"""
+This part of code contains a pretrained vgg_face model.
+ref link: https://github.com/prlz77/vgg-face.pytorch
+"""
+
 import torch
 import torch.nn.functional as F
 import torch.utils.model_zoo
@@ -10,14 +11,12 @@ from musetalk.loss import resnet as ResNet
 
 
 MODEL_URL = "https://github.com/claudio-unipv/vggface-pytorch/releases/download/v0.1/vggface-9d491dd7c30312.pth"
-VGG_FACE_PATH = '/apdcephfs_cq8/share_1367250/zhentaoyu/Driving/00_VASA/00_data/models/pretrain_models/resnet50_ft_weight.pkl'
+VGG_FACE_PATH = "/apdcephfs_cq8/share_1367250/zhentaoyu/Driving/00_VASA/00_data/models/pretrain_models/resnet50_ft_weight.pkl"
 
 # It was 93.5940, 104.7624, 129.1863 before dividing by 255
-MEAN_RGB = [
-    0.367035294117647,
-    0.41083294117647057,
-    0.5066129411764705
-]
+MEAN_RGB = [0.367035294117647, 0.41083294117647057, 0.5066129411764705]
+
+
 def load_state_dict(model, fname):
     """
     Set parameters converted from Caffe models authors of VGGFace2 provide.
@@ -27,8 +26,8 @@ def load_state_dict(model, fname):
         model: model
         fname: file name of parameters converted from a Caffe model, assuming the file format is Pickle.
     """
-    with open(fname, 'rb') as f:
-        weights = pickle.load(f, encoding='latin1')
+    with open(fname, "rb") as f:
+        weights = pickle.load(f, encoding="latin1")
 
     own_state = model.state_dict()
     for name, param in weights.items():
@@ -36,16 +35,21 @@ def load_state_dict(model, fname):
             try:
                 own_state[name].copy_(torch.from_numpy(param))
             except Exception:
-                raise RuntimeError('While copying the parameter named {}, whose dimensions in the model are {} and whose '\
-                                   'dimensions in the checkpoint are {}.'.format(name, own_state[name].size(), param.size()))
+                raise RuntimeError(
+                    "While copying the parameter named {}, whose dimensions in the model are {} and whose "
+                    "dimensions in the checkpoint are {}.".format(
+                        name, own_state[name].size(), param.size()
+                    )
+                )
         else:
             raise KeyError('unexpected key "{}" in state_dict'.format(name))
-        
+
 
 def vggface2(pretrained=True):
     vggface = ResNet.resnet50(num_classes=8631, include_top=True)
     load_state_dict(vggface, VGG_FACE_PATH)
     return vggface
+
 
 def vggface(pretrained=False, **kwargs):
     """VGGFace model.
@@ -110,10 +114,12 @@ class _ConvBlock(torch.nn.Module):
 
         """
         super().__init__()
-        self.convs = torch.nn.ModuleList([
-            torch.nn.Conv2d(in_, out, 3, 1, 1)
-            for in_, out in zip(units[:-1], units[1:])
-        ])
+        self.convs = torch.nn.ModuleList(
+            [
+                torch.nn.Conv2d(in_, out, 3, 1, 1)
+                for in_, out in zip(units[:-1], units[1:])
+            ]
+        )
 
     def forward(self, x):
         # Each convolution is followed by a ReLU, then the block is
@@ -123,13 +129,15 @@ class _ConvBlock(torch.nn.Module):
         return F.max_pool2d(x, 2, 2, 0, ceil_mode=True)
 
 
-
 import numpy as np
 from torchvision import models
+
+
 class Vgg19(torch.nn.Module):
     """
     Vgg19 network for perceptual loss.
     """
+
     def __init__(self, requires_grad=False):
         super(Vgg19, self).__init__()
         vgg_pretrained_features = models.vgg19(pretrained=True).features
@@ -149,10 +157,14 @@ class Vgg19(torch.nn.Module):
         for x in range(21, 30):
             self.slice5.add_module(str(x), vgg_pretrained_features[x])
 
-        self.mean = torch.nn.Parameter(data=torch.Tensor(np.array([0.485, 0.456, 0.406]).reshape((1, 3, 1, 1))),
-                                       requires_grad=False)
-        self.std = torch.nn.Parameter(data=torch.Tensor(np.array([0.229, 0.224, 0.225]).reshape((1, 3, 1, 1))),
-                                      requires_grad=False)
+        self.mean = torch.nn.Parameter(
+            data=torch.Tensor(np.array([0.485, 0.456, 0.406]).reshape((1, 3, 1, 1))),
+            requires_grad=False,
+        )
+        self.std = torch.nn.Parameter(
+            data=torch.Tensor(np.array([0.229, 0.224, 0.225]).reshape((1, 3, 1, 1))),
+            requires_grad=False,
+        )
 
         if not requires_grad:
             for param in self.parameters():
@@ -170,10 +182,13 @@ class Vgg19(torch.nn.Module):
 
 
 from torch import nn
+
+
 class AntiAliasInterpolation2d(nn.Module):
     """
     Band-limited downsampling, for better preservation of the input signal.
     """
+
     def __init__(self, channels, scale):
         super(AntiAliasInterpolation2d, self).__init__()
         sigma = (1 / scale - 1) / 2
@@ -187,14 +202,11 @@ class AntiAliasInterpolation2d(nn.Module):
         # gaussian function of each dimension.
         kernel = 1
         meshgrids = torch.meshgrid(
-            [
-                torch.arange(size, dtype=torch.float32)
-                for size in kernel_size
-                ]
+            [torch.arange(size, dtype=torch.float32) for size in kernel_size]
         )
         for size, std, mgrid in zip(kernel_size, sigma, meshgrids):
             mean = (size - 1) / 2
-            kernel *= torch.exp(-(mgrid - mean) ** 2 / (2 * std ** 2))
+            kernel *= torch.exp(-((mgrid - mean) ** 2) / (2 * std**2))
 
         # Make sure sum of values in gaussian kernel equals 1.
         kernel = kernel / torch.sum(kernel)
@@ -202,7 +214,7 @@ class AntiAliasInterpolation2d(nn.Module):
         kernel = kernel.view(1, 1, *kernel.size())
         kernel = kernel.repeat(channels, *[1] * (kernel.dim() - 1))
 
-        self.register_buffer('weight', kernel)
+        self.register_buffer("weight", kernel)
         self.groups = channels
         self.scale = scale
         inv_scale = 1 / scale
@@ -214,7 +226,7 @@ class AntiAliasInterpolation2d(nn.Module):
 
         out = F.pad(input, (self.ka, self.kb, self.ka, self.kb))
         out = F.conv2d(out, weight=self.weight, groups=self.groups)
-        out = out[:, :, ::self.int_inv_scale, ::self.int_inv_scale]
+        out = out[:, :, :: self.int_inv_scale, :: self.int_inv_scale]
 
         return out
 
@@ -223,15 +235,18 @@ class ImagePyramide(torch.nn.Module):
     """
     Create image pyramide for computing pyramide perceptual loss.
     """
+
     def __init__(self, scales, num_channels):
         super(ImagePyramide, self).__init__()
         downs = {}
         for scale in scales:
-            downs[str(scale).replace('.', '-')] = AntiAliasInterpolation2d(num_channels, scale)
+            downs[str(scale).replace(".", "-")] = AntiAliasInterpolation2d(
+                num_channels, scale
+            )
         self.downs = nn.ModuleDict(downs)
 
     def forward(self, x):
         out_dict = {}
         for scale, down_module in self.downs.items():
-            out_dict['prediction_' + str(scale).replace('-', '.')] = down_module(x)
+            out_dict["prediction_" + str(scale).replace("-", ".")] = down_module(x)
         return out_dict

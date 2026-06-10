@@ -1,5 +1,4 @@
 import os
-import cv2
 from torch.utils.model_zoo import load_url
 
 from ..core import FaceDetector
@@ -9,17 +8,24 @@ from .bbox import *
 from .detect import *
 
 models_urls = {
-    's3fd': 'https://www.adrianbulat.com/downloads/python-fan/s3fd-619a316812.pth',
+    "s3fd": "https://www.adrianbulat.com/downloads/python-fan/s3fd-619a316812.pth",
 }
 
 
 class SFDDetector(FaceDetector):
-    def __init__(self, device, path_to_detector=os.path.join(os.path.dirname(os.path.abspath(__file__)), 's3fd.pth'), verbose=False):
+    def __init__(
+        self,
+        device,
+        path_to_detector=os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "s3fd.pth"
+        ),
+        verbose=False,
+    ):
         super(SFDDetector, self).__init__(device, verbose)
 
         # Initialise the face detector
         if not os.path.isfile(path_to_detector):
-            model_weights = load_url(models_urls['s3fd'])
+            model_weights = load_url(models_urls["s3fd"])
         else:
             model_weights = torch.load(path_to_detector)
 
